@@ -45,7 +45,7 @@
 
 ### Запуск приложения
  
- Запуск приложения
+ Заполнить конфигурационный файл [`application.conf`](https://github.com/egdeliya/2step-verification/blob/master/src/main/resources/application_example.conf)
  
  ```
   docker-compose up
