@@ -10,4 +10,9 @@ trait BannedUsersService {
     * @return Future[result : Boolean] - true - забанен, false - нет
     */
   def checkUserIsBanned(user: User): Future[Boolean]
+
+  /**
+    * Бан пользователя
+    */
+  def banUser(user: User): Future[Unit]
 }

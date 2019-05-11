@@ -6,7 +6,7 @@ import com.outworkers.phantom.database.Database
 import Cassandra.tables._
 
 import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
+import scala.concurrent.Future
 
 class CassandraDb(override val connector: CassandraConnection) extends Database[CassandraDb](connector) {
   object Auths extends AuthsTable with connector.Connector
@@ -28,5 +28,3 @@ class CassandraDb(override val connector: CassandraConnection) extends Database[
   }
 
 }
-
-object CassandraDb extends CassandraDb(Connector.connector)

@@ -38,6 +38,7 @@ class AuthServiceCassandra(private val database: CassandraDb,
   }
 
   def checkUserRegistered(user: User): Future[Boolean] = {
+    logger.debug(s"Check user is registered ${user.getPhone}")
     database.checkUserRegistered(user.getPhone)
   }
 }

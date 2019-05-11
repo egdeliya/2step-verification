@@ -23,7 +23,7 @@ class RegisterTest extends FlatSpec
     val conf: Config = mock[Config]
 
     val dbManager: CassandraDb = mock[CassandraDb]
-    val bannedUsersService: BannedUsersService = mock[BannedUsersServiceDummy]
+    val bannedUsersService: BannedUsersService = mock[BannedUsersService]
 
     val authService: AuthService = new AuthServiceCassandra(dbManager, bannedUsersService)
     val webServer = new WebServer(authService, conf)

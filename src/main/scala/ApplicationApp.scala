@@ -1,7 +1,8 @@
 import com.typesafe.config.ConfigFactory
 import Cassandra.CassandraDb
 import Cassandra.Connector._
-import repositories.{AuthServiceCassandra, BannedUsersService, BannedUsersServiceDummy}
+import com.redis.RedisClientPool
+import repositories.{AuthServiceCassandra, BannedUsersService, BannedUsersServiceDummy, BannedUsersServiceRedis}
 
 object ApplicationApp extends App {
 
@@ -9,7 +10,11 @@ object ApplicationApp extends App {
   val dbManager = new CassandraDb(connector)
   dbManager.createTablesIfNotExists()
 
-  val bannedUsersService: BannedUsersService = new BannedUsersServiceDummy
+  val endpoint = conf.getString("redis.endpoint")
+  val port = conf.getInt("redis.port")
+  val redisClients = new RedisClientPool(endpoint, port)
+
+  val bannedUsersService: BannedUsersService = new BannedUsersServiceRedis(redisClients)
 
   val authService = new AuthServiceCassandra(dbManager, bannedUsersService)
 

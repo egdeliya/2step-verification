@@ -11,3 +11,4 @@ libraryDependencies ++= phantomCassandra
 libraryDependencies ++= akka
 libraryDependencies ++= bcrypt
 libraryDependencies ++= sms
+libraryDependencies ++= redis

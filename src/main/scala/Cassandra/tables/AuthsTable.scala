@@ -13,13 +13,13 @@ abstract class AuthsTable extends Table[AuthsTable, String] {
   object password extends StringColumn
 
   def checkUserRegistered(phoneNumber: String): Future[Boolean] = {
+    logger.debug("Check User Registered in Auths table")
     select
       .where(_.phoneNumber eqs phoneNumber)
-      .consistencyLevel_=(ConsistencyLevel.ONE)
-      .one()
-      .collect {
-        case Some(_) => true
-        case None => false
+      .future()
+      .map {
+        case resultSet if resultSet.allRows().nonEmpty => true
+        case _ => false
       }
   }
 

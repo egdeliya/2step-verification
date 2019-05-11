@@ -48,4 +48,8 @@ object Dependencies {
   val sms = Seq(
     "com.nexmo" % "client" % "4.2.1"
   )
+  
+  val redis = Seq(
+    "net.debasishg" %% "redisclient" % "3.9"
+  )
 }
