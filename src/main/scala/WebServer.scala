@@ -114,7 +114,8 @@ class WebServer(private val authService: AuthService,
                InvalidCodeException() |
                InternalServerErrorException() |
                NoCodeFoundException() |
-               InvalidCredentialsException()) =>
+               InvalidCredentialsException() |
+               WrongSessionException()) =>
       complete(HttpResponse(400, entity = th.getMessage))
     case th: InternalError =>
       complete (HttpResponse(500, entity = th.getMessage))
