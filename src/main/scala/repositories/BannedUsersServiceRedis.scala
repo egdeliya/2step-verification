@@ -1,8 +1,7 @@
 package repositories
 
 import com.redis
-import com.redis.{RedisClient, RedisClientPool}
-import com.typesafe.config.Config
+import com.redis.RedisClientPool
 import com.typesafe.scalalogging.StrictLogging
 import domain.models.User
 import exceptions.InternalServerErrorException

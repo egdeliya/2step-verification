@@ -1,5 +1,6 @@
 package domain.models
 
+// TODO make user without password check
 case class User(phone: String,
                 pass: String) {
 

@@ -1,4 +1,4 @@
 package exceptions
 
-case class UserNotRegisteredException(message: String, cause: Throwable)
-  extends Exception(message, cause)
+case class UserNotRegisteredException(phone: String)
+  extends Exception(s"User $phone not registered yet", null)

@@ -3,12 +3,10 @@ import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpResponse
 import akka.http.scaladsl.server.{Directives, ExceptionHandler}
 import akka.stream.ActorMaterializer
-
 import com.typesafe.config.Config
 import com.typesafe.scalalogging.StrictLogging
-
 import domain.models.User
-import exceptions.{InvalidPhoneNumberException, UserAlreadyRegisteredException, UserBannedException, WeakPasswordException}
+import exceptions._
 import repositories.AuthService
 
 import scala.io.StdIn
@@ -42,6 +40,20 @@ class WebServer(private val authService: AuthService,
             }
           }
         }
+      } ~
+      path("login") {
+        post {
+          entity(as[LoginRequest]) { loginRequest =>
+            val user = User(loginRequest.phoneNumber, loginRequest.password)
+            logger.info(s"Logging in ${user.getPhone}")
+
+            val res = authService.login(user)
+
+            onSuccess(res) { _ =>
+              complete(HttpResponse(200, entity = WebStatus.Ok))
+            }
+          }
+        }
       }
     }
 
@@ -61,7 +73,8 @@ class WebServer(private val authService: AuthService,
     case th @ (UserAlreadyRegisteredException(_, _) |
                UserBannedException(_, _) |
                InvalidPhoneNumberException(_, _) |
-               WeakPasswordException(_, _)) =>
+               WeakPasswordException(_, _) |
+               UserNotRegisteredException(_)) =>
       complete(HttpResponse(400, entity = th.getMessage))
     case th: InternalError =>
       complete (HttpResponse(500, entity = th.getMessage))
