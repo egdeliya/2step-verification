@@ -1,6 +1,7 @@
 ## 2step-verification
 
 [![Build Status](https://travis-ci.com/egdeliya/2step-verification.svg?token=wFxdXQB6FhLzkWHEHfW3&branch=master)](https://travis-ci.com/egdeliya/2step-verification)
+[![codecov](https://codecov.io/gh/egdeliya/2step-verification/branch/master/graph/badge.svg)](https://codecov.io/gh/egdeliya/2step-verification)
 
 Двухфакторная авторизация - апи, которое по пользователю определяет, логинлся ли он раньше с этого устройства, да -> ok, 
 не логинился - шлём смску (дёргаем стороннее апи), если код совпадает, то ок, нет - идёт в бан на час
