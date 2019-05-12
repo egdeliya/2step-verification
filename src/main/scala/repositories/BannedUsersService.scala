@@ -14,5 +14,5 @@ trait BannedUsersService {
   /**
     * Бан пользователя
     */
-  def banUser(user: User): Future[Unit]
+  def banUser(phoneNum: String): Future[Unit]
 }

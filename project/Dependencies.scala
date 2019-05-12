@@ -52,4 +52,8 @@ object Dependencies {
   val redis = Seq(
     "net.debasishg" %% "redisclient" % "3.9"
   )
+  
+  val jwtSession = Seq(
+    "com.pauldijou" %% "jwt-play" % "2.1.0"
+  )
 }

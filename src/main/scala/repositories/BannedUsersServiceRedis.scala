@@ -15,7 +15,7 @@ class BannedUsersServiceRedis(private val redisClients: RedisClientPool)
   with StrictLogging {
 
   private val userIsBanned = "banned"
-  private val durationPeriod = 1.hour.toSeconds
+  private val durationPeriod = redis.Seconds(1.hour.toSeconds)
 
   def checkUserIsBanned(user: User): Future[Boolean] = {
     Future {
@@ -28,18 +28,18 @@ class BannedUsersServiceRedis(private val redisClients: RedisClientPool)
     }
   }
 
-  def banUser(user: User): Future[Unit] = {
+  def banUser(phoneNum: String): Future[Unit] = {
       Future {
         redisClients.withClient { client =>
-          client.set(key = user.getPhone,
+          client.set(key = phoneNum,
             value = userIsBanned,
             onlyIfExists = false,
-            time = redis.Seconds(durationPeriod))
+            time = durationPeriod)
         }
       }.flatMap {
         case successfulResult if successfulResult => Future.successful()
         case _ =>
-          logger.error(s"Redis error, failed to ban user ${user.getPhone}!")
+          logger.error(s"Redis error, failed to ban user $phoneNum!")
           Future.failed(InternalServerErrorException())
       }
   }

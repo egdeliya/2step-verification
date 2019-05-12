@@ -16,4 +16,10 @@ trait AuthService {
     * @return Future.successful() - в случае удачи, Future.failed() иначе
     */
   def register(user: User): Future[Unit]
+
+  /**
+    * Верификация пользователя
+    * @return Future.successful() - в случае удачи, Future.failed() иначе
+    */
+  def verifyCode(phoneNum: String, code: String): Future[Unit]
 }

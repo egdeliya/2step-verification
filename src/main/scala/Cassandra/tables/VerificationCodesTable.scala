@@ -20,4 +20,10 @@ abstract class VerificationCodesTable extends Table[VerificationCodesTable, (Str
       .future()
       .map { _ => code }
   }
+
+  def getSmsCode(phoneNumber: String): Future[Option[(String, String)]] = {
+    select
+      .where(_.phoneNumber eqs phoneNumber)
+      .one()
+  }
 }

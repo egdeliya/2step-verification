@@ -33,4 +33,8 @@ class CassandraDb(override val connector: CassandraConnection) extends Database[
     SmsCodes.storeSmsCode(phoneNumber, code)
   }
 
+  def getSmsCode(phoneNumber: String): Future[Option[(String, String)]] = {
+    SmsCodes.getSmsCode(phoneNumber)
+  }
+
 }

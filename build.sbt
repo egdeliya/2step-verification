@@ -12,3 +12,4 @@ libraryDependencies ++= akka
 libraryDependencies ++= bcrypt
 libraryDependencies ++= sms
 libraryDependencies ++= redis
+libraryDependencies ++= jwtSession

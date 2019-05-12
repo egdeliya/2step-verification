@@ -1,18 +1,22 @@
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.model.HttpResponse
-import akka.http.scaladsl.server.{Directives, ExceptionHandler}
+import akka.http.scaladsl.model.headers.HttpCookie
+import akka.http.scaladsl.server.{Directives, ExceptionHandler, Route}
 import akka.stream.ActorMaterializer
 import com.typesafe.config.Config
+import pdi.jwt.JwtSession
+import play.api.Configuration
 import com.typesafe.scalalogging.StrictLogging
 import domain.models.User
 import exceptions._
-import repositories.AuthService
+import repositories.{AuthService, SessionService}
 
 import scala.io.StdIn
 
 class WebServer(private val authService: AuthService,
-                private val conf: Config
+                private val conf: Configuration,
+                private val sessionService: SessionService
 )
   extends Directives
   with WebProtocol
@@ -22,8 +26,8 @@ class WebServer(private val authService: AuthService,
   private implicit val materializer = ActorMaterializer()
   private implicit val ec = system.dispatcher
 
-  private val endpoint = conf.getString("webserver.endpoint")
-  private val port = conf.getInt("webserver.port")
+  private val endpoint = conf.get[String]("webserver.endpoint")
+  private val port = conf.get[Int]("webserver.port")
 
   private val route =
     handleExceptions(twoStepAuthExceptionHandler) {
@@ -54,12 +58,32 @@ class WebServer(private val authService: AuthService,
             }
           }
         }
-      }
+      } ~
+        path("verifyCode") {
+          post {
+            entity(as[VerifyRequest]) { verifyRequest =>
+              logger.info(s"User ${verifyRequest.phoneNumber} is verifying code")
+
+              val sessionToken = authService
+                .verifyCode(verifyRequest.phoneNumber, verifyRequest.code)
+                .flatMap { _ =>
+                  sessionService.getSession(verifyRequest.phoneNumber)
+                }
+
+              onSuccess(sessionToken) { sessionToken =>
+                val cookie = HttpCookie("session_token", sessionToken)
+                setCookie(cookie) { ctx =>
+                  ctx.complete(HttpResponse(200, entity = WebStatus.Ok))
+                }
+              }
+            }
+          }
+        }
     }
 
-  def getRoute() = route
+  def getRoute = route
 
-  def run() = {
+  def run(): Unit = {
     val bindingFuture = Http().bindAndHandle(route, endpoint, port)
     println(s"Server online at http://$endpoint:$port/\nPress RETURN to stop...")
     StdIn.readLine()
@@ -74,7 +98,9 @@ class WebServer(private val authService: AuthService,
                UserBannedException(_, _) |
                InvalidPhoneNumberException(_, _) |
                WeakPasswordException(_, _) |
-               UserNotRegisteredException(_)) =>
+               UserNotRegisteredException(_) |
+               InvalidCodeException() |
+               InternalServerErrorException()) =>
       complete(HttpResponse(400, entity = th.getMessage))
     case th: InternalError =>
       complete (HttpResponse(500, entity = th.getMessage))

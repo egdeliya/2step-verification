@@ -3,11 +3,12 @@ package repositories
 import com.typesafe.scalalogging.StrictLogging
 import Cassandra.CassandraDb
 import domain.models.User
-import exceptions.{InvalidCredentialsException, UserAlreadyRegisteredException, UserBannedException, UserNotRegisteredException}
+import exceptions._
 import org.mindrot.jbcrypt.BCrypt
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
+import scala.util.Failure
 
 class AuthServiceCassandra(private val database: CassandraDb,
                            private val bannedUsersService: BannedUsersService,
@@ -40,6 +41,25 @@ class AuthServiceCassandra(private val database: CassandraDb,
 
         case _ =>
           database.registerUser(user.getPhone, user.getPass)
+      }
+  }
+
+  def verifyCode(phoneNum: String, code: String): Future[Unit] = {
+    logger.debug(s"AuthServiceCassandra: verify code $phoneNum")
+    database.getSmsCode(phoneNum)
+      .flatMap {
+        case Some(value) if code.equals(value._2) =>
+          Future.successful()
+
+        case Some(_) =>
+          bannedUsersService
+            .banUser(phoneNum)
+            .flatMap {
+              _ => Future.failed(InvalidCodeException())
+            }
+
+        case None =>
+          throw NoCodeFoundException()
       }
   }
 
