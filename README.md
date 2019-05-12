@@ -93,6 +93,9 @@
  
  ```
   docker-compose up
+  cd redis
+  docker-compose up
+  cd ..
   sbt "runMain ApplicationApp"
  ```
  
