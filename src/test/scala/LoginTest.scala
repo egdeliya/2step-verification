@@ -21,6 +21,7 @@ class LoginTest extends FlatSpec
   trait loginTestData extends Mocks {
     val validPhoneNumber = "79859234501"
     val validPassword = "12312Qwerty"
+    val invalidPassword = "12312Qwerty1"
 
     val smsCode = "1234"
     val smsSubmissionResponse: SmsSubmissionResponse = SmsSubmissionResponse.fromJson(
@@ -30,6 +31,19 @@ class LoginTest extends FlatSpec
         |   "messages":[
         |     {
         |       "status":0
+        |     }
+        |   ]
+        |}
+      """.stripMargin
+    )
+
+    val failedSmsSubmissionResponse: SmsSubmissionResponse = SmsSubmissionResponse.fromJson(
+      """
+        |{
+        | "message-count":1,
+        |   "messages":[
+        |     {
+        |       "status":1
         |     }
         |   ]
         |}
@@ -88,6 +102,42 @@ class LoginTest extends FlatSpec
 
     verify(redisClients).withClient(any())
     verify(smsClient, never()).submitMessage(any())
+    verify(dbManager, never()).storeSmsCode(any(), any())
+  }
+
+  "WebServer" should "fail logging user with invalid password" in new loginTestData {
+    val newUser = User(validPhoneNumber, invalidPassword)
+
+    when(redisClients.withClient(any())).thenReturn(None)
+    when(dbManager.checkUserRegistered(newUser.getPhone))
+      .thenReturn(Future.successful(Some(User(newUser.getPhone, BCrypt.hashpw(validPassword, BCrypt.gensalt())))))
+
+    val loginRequest = LoginRequest(validPhoneNumber, invalidPassword)
+    Post("/login", loginRequest) ~> route ~> check {
+      assert(responseAs[String] == "Invalid credentials")
+      status shouldBe StatusCodes.BadRequest
+    }
+
+    verify(redisClients).withClient(any())
+    verify(smsClient, never()).submitMessage(any())
+    verify(dbManager, never()).storeSmsCode(any(), any())
+  }
+
+  "WebServer" should "fail when can't send sms" in new loginTestData {
+    val newUser = User(validPhoneNumber, validPassword)
+
+    when(redisClients.withClient(any())).thenReturn(None)
+    when(dbManager.checkUserRegistered(newUser.getPhone))
+      .thenReturn(Future.successful(Some(User(newUser.getPhone, BCrypt.hashpw(newUser.getPass, BCrypt.gensalt())))))
+    when(smsClient.submitMessage(any())).thenReturn(failedSmsSubmissionResponse)
+
+    val loginRequest = LoginRequest(validPhoneNumber, validPassword)
+    Post("/login", loginRequest) ~> route ~> check {
+      assert(responseAs[String] == "Some error occurred :( ")
+      status shouldBe StatusCodes.BadRequest
+    }
+
+    verify(redisClients).withClient(any())
     verify(dbManager, never()).storeSmsCode(any(), any())
   }
 }

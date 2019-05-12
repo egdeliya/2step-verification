@@ -31,7 +31,7 @@ class SmsServiceCassandraNexmo(private val database: CassandraDb,
     Future {
       val responses: SmsSubmissionResponse = smsClient.submitMessage(message)
       if (responses.getMessages.get(0).getStatus != MessageStatus.OK) {
-        throw new InternalServerErrorException
+        throw InternalServerErrorException()
       }
     }.flatMap { _ =>
       database.storeSmsCode(user.getPhone, smsCode)

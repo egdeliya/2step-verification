@@ -53,6 +53,21 @@ class VerifyCodeTest extends FlatSpec
     verify(sessionService, never).getSession(any())
   }
 
+  "WebServer" should "fail if code was not found" in new verifyCodeTestData {
+    when(dbManager.getSmsCode(validPhoneNumber))
+      .thenReturn(Future.successful(None))
+
+    val verifyRequest = VerifyRequest(validPhoneNumber, wrongCode)
+    Post("/verifyCode", verifyRequest) ~> route ~> check {
+      responseAs[String] shouldEqual "No code was found for user!"
+      status shouldBe StatusCodes.BadRequest
+      assert(header[`Set-Cookie`].isEmpty)
+    }
+
+    verify(redisClients, never).withClient(any())
+    verify(sessionService, never).getSession(any())
+  }
+
   "WebServer" should "fail if redis can't ban user with wrong code" in new verifyCodeTestData {
     when(dbManager.getSmsCode(validPhoneNumber))
       .thenReturn(Future.successful(Some((validPhoneNumber, smsCode))))

@@ -1,11 +1,10 @@
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.StatusCodes
 import akka.http.scaladsl.model.HttpResponse
 import akka.http.scaladsl.model.headers.HttpCookie
 import akka.http.scaladsl.server.{Directives, ExceptionHandler, Route}
 import akka.stream.ActorMaterializer
-import com.typesafe.config.Config
-import pdi.jwt.JwtSession
 import play.api.Configuration
 import com.typesafe.scalalogging.StrictLogging
 import domain.models.User
@@ -78,6 +77,19 @@ class WebServer(private val authService: AuthService,
               }
             }
           }
+        } ~
+        path("") {
+          optionalCookie("session_token") {
+            case Some(sessionToken) =>
+              val userData = sessionService
+                .getUserDataFromSessionToken(sessionToken.value)
+
+              onSuccess(userData) { userData =>
+                complete(HttpResponse(200, entity = s"User $userData was successfully logged in!"))
+              }
+
+            case None             => complete(HttpResponse(StatusCodes.Forbidden, entity = "Try to login first!"))
+          }
         }
     }
 
@@ -100,7 +112,9 @@ class WebServer(private val authService: AuthService,
                WeakPasswordException(_, _) |
                UserNotRegisteredException(_) |
                InvalidCodeException() |
-               InternalServerErrorException()) =>
+               InternalServerErrorException() |
+               NoCodeFoundException() |
+               InvalidCredentialsException()) =>
       complete(HttpResponse(400, entity = th.getMessage))
     case th: InternalError =>
       complete (HttpResponse(500, entity = th.getMessage))
