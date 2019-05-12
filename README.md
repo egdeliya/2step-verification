@@ -44,6 +44,49 @@
 
 ```HTTP/1.1 201 OK```
 
+* залогиниться
+
+Пользователь должен быть зарегистрирован и не забанен. При успешном логине должна отправиться смс-ка :) (но это не точно)
+Если код не отправился (у апи смс бывают проблемы), то можно посмотреть в таблицу кассандры prod.codes...
+
+ `POST /login`
+```json
+    {
+      "phoneNumber": "some phonenumber",
+      "password": "secure password"
+    }
+```
+    
+Ответ:  
+
+```HTTP/1.1 200 OK```
+
+* ввести верификационный код из смс-ки
+
+На данном этапе полагается, что пользователь уже зарегистрирован и залогинен. Если код неверный, то пользователь идет в бан на час.
+
+ `POST /verifyCode`
+```json
+    {
+      "phoneNumber": "some phonenumber",
+      "code": "some code"
+    }
+```
+    
+Ответ:  
+
+```HTTP/1.1 200 OK```
+
+* войти в приложение!
+
+Если пользователь подтвердил код, то он может войти в приложение
+
+ `GET /`
+    
+Ответ:  
+
+```HTTP/1.1 200 User <user phone> was successfully logged in!```
+
 ### Запуск приложения
  
  Заполнить конфигурационный файл [`application.conf`](https://github.com/egdeliya/2step-verification/blob/master/src/main/resources/application_example.conf)
