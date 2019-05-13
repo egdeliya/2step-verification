@@ -24,3 +24,6 @@ target/
 .scala_dependencies
 .worksheet
 src/main/resources/application.conf
+
+graphite_graphana_statsd/data
+graphite_graphana_statsd/log

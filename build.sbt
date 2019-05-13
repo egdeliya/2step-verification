@@ -13,3 +13,4 @@ libraryDependencies ++= bcrypt
 libraryDependencies ++= sms
 libraryDependencies ++= redis
 libraryDependencies ++= jwtSession
+libraryDependencies ++= monitoringDependencies

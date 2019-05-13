@@ -7,6 +7,9 @@ import com.nexmo.client.NexmoClient
 import com.redis.RedisClientPool
 import repositories._
 
+import com.timgroup.statsd.StatsDClient
+import com.timgroup.statsd.NonBlockingStatsDClient
+
 object ApplicationApp extends App {
 
   val conf = Configuration(ConfigFactory.load("application.conf"))
@@ -17,6 +20,11 @@ object ApplicationApp extends App {
   val redisPort = conf.get[Int]("redis.port")
   val redisClients = new RedisClientPool(redisEndpoint, redisPort)
   val bannedUsersService: BannedUsersService = new BannedUsersServiceRedis(redisClients)
+
+  val statsdEndpoint = conf.get[String]("statsd.endpoint")
+  val statsdPort = conf.get[Int]("statsd.port")
+  val statsdPrefix = conf.get[String]("statsd.prefix")
+  private val statsd = new NonBlockingStatsDClient(statsdPrefix, statsdEndpoint, statsdPort)
 
   val nexmoApiKey = conf.get[String]("nexmo.api_key")
   val nexmoApiSecret = conf.get[String]("nexmo.api_secret")
@@ -30,6 +38,6 @@ object ApplicationApp extends App {
   val authService = new AuthServiceCassandra(dbManager, bannedUsersService, smsService)
 
   val sessionService: SessionService = new SessionServiceJwt(conf)
-  val webServer = new WebServer(authService, conf, sessionService)
+  val webServer = new WebServer(authService, conf, sessionService, statsd)
   webServer.run()
 }

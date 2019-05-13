@@ -56,4 +56,8 @@ object Dependencies {
   val jwtSession = Seq(
     "com.pauldijou" %% "jwt-play" % "2.1.0"
   )
+
+  val monitoringDependencies = Seq(
+    "com.timgroup" % "java-statsd-client" % "3.0.1"
+  )
 }

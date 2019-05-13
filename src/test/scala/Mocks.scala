@@ -2,13 +2,10 @@ import Cassandra.CassandraDb
 import akka.http.scaladsl.server.Route
 import com.nexmo.client.sms.SmsClient
 import com.redis.RedisClientPool
+import com.timgroup.statsd.NonBlockingStatsDClient
 import org.scalatest.mockito.MockitoSugar
 import play.api.Configuration
 import repositories._
-import org.mockito.Mockito._
-import org.mockito.Matchers.any
-
-import scala.concurrent.duration.Duration
 
 trait Mocks extends MockitoSugar {
   val conf: Configuration = mock[Configuration]
@@ -21,7 +18,9 @@ trait Mocks extends MockitoSugar {
   val bannedUsersService: BannedUsersService = new BannedUsersServiceRedis(redisClients)
   val authService: AuthService = new AuthServiceCassandra(dbManager, bannedUsersService, smsService)
 
+  private val statsd = new NonBlockingStatsDClient("", "", 0)
+
   val sessionService = mock[SessionService]
-  val webServer = new WebServer(authService, conf, sessionService)
+  val webServer = new WebServer(authService, conf, sessionService, statsd)
   lazy val route: Route = webServer.getRoute
 }

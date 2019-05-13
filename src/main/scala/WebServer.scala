@@ -11,11 +11,14 @@ import domain.models.User
 import exceptions._
 import repositories.{AuthService, SessionService}
 
+import com.timgroup.statsd.NonBlockingStatsDClient
+
 import scala.io.StdIn
 
 class WebServer(private val authService: AuthService,
                 private val conf: Configuration,
-                private val sessionService: SessionService
+                private val sessionService: SessionService,
+                private val statsd: NonBlockingStatsDClient
 )
   extends Directives
   with WebProtocol
@@ -33,12 +36,21 @@ class WebServer(private val authService: AuthService,
       path("register") {
         post {
           entity(as[RegisterRequest]) { registerRequest =>
+            statsd.incrementCounter("register")
+            statsd.incrementCounter("requestInProgress")
+            val start = System.currentTimeMillis()
+
             val user = User(registerRequest.phoneNumber, registerRequest.password)
             logger.info(s"Registering in ${user.getPhone}")
 
-            val result = authService.register(user)
+            val result = authService
+              .register(user)
+              .map {
+                _ => statsd.recordExecutionTime("registerTime", System.currentTimeMillis() - start)
+              }
 
             onSuccess(result) { ctx =>
+              statsd.decrementCounter("requestInProgress")
               ctx.complete(HttpResponse(201, entity = WebStatus.Ok))
             }
           }
@@ -47,13 +59,23 @@ class WebServer(private val authService: AuthService,
       path("login") {
         post {
           entity(as[LoginRequest]) { loginRequest =>
+            statsd.incrementCounter("login")
+            statsd.incrementCounter("requestInProgress")
+            val start = System.currentTimeMillis()
+
             val user = User(loginRequest.phoneNumber, loginRequest.password)
             logger.info(s"Logging in ${user.getPhone}")
 
-            val res = authService.login(user)
+            statsd.incrementCounter("requestInProgress")
+            val res = authService
+              .login(user)
+              .map {
+                _ => statsd.recordExecutionTime("loginTime", System.currentTimeMillis() - start)
+              }
 
-            onSuccess(res) { _ =>
-              complete(HttpResponse(200, entity = WebStatus.Ok))
+            onSuccess(res) { ctx =>
+              statsd.decrementCounter("requestInProgress")
+              ctx.complete(HttpResponse(200, entity = WebStatus.Ok))
             }
           }
         }
@@ -61,15 +83,21 @@ class WebServer(private val authService: AuthService,
         path("verifyCode") {
           post {
             entity(as[VerifyRequest]) { verifyRequest =>
+              statsd.incrementCounter("verifyCode")
+              statsd.incrementCounter("requestInProgress")
+              val start = System.currentTimeMillis()
+
               logger.info(s"User ${verifyRequest.phoneNumber} is verifying code")
 
               val sessionToken = authService
                 .verifyCode(verifyRequest.phoneNumber, verifyRequest.code)
                 .flatMap { _ =>
+                  statsd.recordExecutionTime("verifyCodeTime", System.currentTimeMillis() - start)
                   sessionService.getSession(verifyRequest.phoneNumber)
                 }
 
               onSuccess(sessionToken) { sessionToken =>
+                statsd.decrementCounter("requestInProgress")
                 val cookie = HttpCookie("session_token", sessionToken)
                 setCookie(cookie) { ctx =>
                   ctx.complete(HttpResponse(200, entity = WebStatus.Ok))
@@ -79,16 +107,27 @@ class WebServer(private val authService: AuthService,
           }
         } ~
         path("") {
+          statsd.incrementCounter("/")
+          statsd.incrementCounter("requestInProgress")
+
           optionalCookie("session_token") {
             case Some(sessionToken) =>
+              val start = System.currentTimeMillis()
               val userData = sessionService
                 .getUserDataFromSessionToken(sessionToken.value)
+                .map { data =>
+                  statsd.recordExecutionTime("/ time", System.currentTimeMillis() - start)
+                  data
+                }
 
               onSuccess(userData) { userData =>
+                statsd.decrementCounter("requestInProgress")
                 complete(HttpResponse(200, entity = s"User $userData was successfully logged in!"))
               }
 
-            case None             => complete(HttpResponse(StatusCodes.Forbidden, entity = "Try to login first!"))
+            case None =>
+              statsd.decrementCounter("requestInProgress")
+              complete(HttpResponse(StatusCodes.Forbidden, entity = "Try to login first!"))
           }
         }
     }
@@ -116,10 +155,19 @@ class WebServer(private val authService: AuthService,
                NoCodeFoundException() |
                InvalidCredentialsException() |
                WrongSessionException()) =>
+      statsd.incrementCounter("statusCode.400")
+      statsd.decrementCounter("requestInProgress")
+
       complete(HttpResponse(400, entity = th.getMessage))
     case th: InternalError =>
+      statsd.incrementCounter("statusCode.500")
+      statsd.decrementCounter("requestInProgress")
+
       complete (HttpResponse(500, entity = th.getMessage))
     case th: Throwable =>
+      statsd.incrementCounter("statusCode.500")
+      statsd.decrementCounter("requestInProgress")
+
       logger.error(s"Error while doing request ${th.getMessage}")
 //      complete (HttpResponse(500, entity = "Some error occurred while doing request"))
       complete (HttpResponse(500, entity = th.getMessage))
